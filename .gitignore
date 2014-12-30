@@ -1,0 +1,7 @@
+*.o
+qucs2spice
+*.cmake
+*.net
+*.user
+*~
+
