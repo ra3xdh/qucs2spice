@@ -3,6 +3,7 @@
 
 
 QString convert_rcl(QString line);
+QString convert_header(QString line);
 
 int main(int argc, char **argv)
 {
@@ -20,6 +21,8 @@ int main(int argc, char **argv)
     QRegExp ind_pattern("^[ \t]*L:[A-Za-z]+.*");
     QRegExp diode_pattern("^[ \t]*Diode:[A-Za-z]+.*");
     QRegExp mosfet_pattern("^[ \t]*MOSFET:[A-Za-z]+.*");
+    QRegExp subckt_head_pattern("^[ \t]*\\.Def:[A-Za-z]+.*");
+    QRegExp ends_pattern("^[ \t]*\\.Def:End[ \t]*$");
 
     QString s="";
 
@@ -27,11 +30,18 @@ int main(int argc, char **argv)
         QTextStream qucs_netlist(&qnet_file);
         while (!qucs_netlist.atEnd()) {
             QString line = qucs_netlist.readLine();
-            if (res_pattern.exactMatch(line)) s += convert_rcl(line);
-            if (cap_pattern.exactMatch(line)) s += convert_rcl(line);
+            if (subckt_head_pattern.exactMatch(line)) {
+                if (ends_pattern.exactMatch(line)) s += ".ENDS\n";
+                else s += convert_header(line) + "\n";
+            }
+            if (res_pattern.exactMatch(line)) s += convert_rcl(line) + "\n";
+            if (cap_pattern.exactMatch(line)) s += convert_rcl(line) + "\n";
+            if (ind_pattern.exactMatch(line)) s += convert_rcl(line) + "\n";
         }
         qnet_file.close();
     }
+
+    qDebug()<<s;
 
     return 0;
 }
@@ -47,7 +57,12 @@ QString convert_rcl(QString line)
     s1 = lst.takeFirst().remove("\"");
     int idx = s1.indexOf('=');
     s += s1.right(s1.count()-idx-1);
-    qDebug()<<s;
     return s;
 }
+
+QString convert_header(QString line)
+{
+    return line.replace(".Def:",".SUBCKT ");
+}
+
 
