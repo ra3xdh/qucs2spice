@@ -8,8 +8,10 @@ QString convert_diode(QString line);
 QString convert_mosfet(QString line);
 QString convert_cccs(QString line);
 QString convert_ccvs(QString line);
+QString convert_ccs(QString line, bool voltage);
 QString convert_vccs(QString line);
 QString convert_vcvs(QString line);
+QString convert_vcs(QString line, bool voltage);
 
 int main(int argc, char **argv)
 {
@@ -51,6 +53,7 @@ int main(int argc, char **argv)
             if (mosfet_pattern.exactMatch(line)) s += convert_mosfet(line);
             if (vccs_pattern.exactMatch(line)) s += convert_vccs(line);
             if (vcvs_pattern.exactMatch(line)) s += convert_vcvs(line);
+            if (cccs_pattern.exactMatch(line)) s+= convert_cccs(line);
         }
         qnet_file.close();
     }
@@ -141,35 +144,47 @@ QString convert_mosfet(QString line)
 
 QString convert_cccs(QString line)
 {
-
+    return convert_ccs(line,false);
 }
 
 QString convert_ccvs(QString line)
 {
+    return convert_ccs(line,true);
+}
 
+QString convert_ccs(QString line, bool voltage)
+{
+    QStringList lst = line.split(" ",QString::SkipEmptyParts);
+    QString name = lst.takeFirst();
+    int idx = name.indexOf(':');
+    name =  name.right(name.count()-idx-1); // name
+
+    QString nod0 = lst.takeFirst();
+    QString nod1 = lst.takeFirst();
+    QString nod2 = lst.takeFirst();
+    QString nod3 = lst.takeFirst();
+    QString s1 = lst.takeFirst().remove("\"");
+    idx = s1.indexOf('=');
+    QString val = s1.right(s1.count()-idx-1);
+    QString s;
+    if (voltage) s="H";
+    else s="F";
+    s += QString("%1 %2 %3 V%4 %5\n").arg(name).arg(nod1).arg(nod2).arg(name).arg(val); // output source nodes
+    s += QString("V%1 %2 %3 DC 0\n").arg(name).arg(nod0).arg(nod3);   // controlling 0V source
+    return s;
 }
 
 QString convert_vccs(QString line)
 {
-    QStringList lst = line.split(" ",QString::SkipEmptyParts);
-    QString name = lst.takeFirst();
-    int idx = name.indexOf(':');
-    name =  name.right(name.count()-idx-1); // name
-
-    QString nod0 = lst.takeFirst();
-    QString nod1 = lst.takeFirst();
-    QString nod2 = lst.takeFirst();
-    QString nod3 = lst.takeFirst();
-    QString s1 = lst.takeFirst().remove("\"");
-    idx = s1.indexOf('=');
-    QString val = s1.right(s1.count()-idx-1);
-
-    QString s="";
-    s += QString("G%1 %2 %3 %4 %5 %6\n").arg(name).arg(nod1).arg(nod2).arg(nod0).arg(nod3).arg(val);
-    return s;
+    return convert_vcs(line,false);
 }
 
 QString convert_vcvs(QString line)
+{
+    return convert_vcs(line,true);
+}
+
+QString convert_vcs(QString line,bool voltage)
 {
     QStringList lst = line.split(" ",QString::SkipEmptyParts);
     QString name = lst.takeFirst();
@@ -184,7 +199,9 @@ QString convert_vcvs(QString line)
     idx = s1.indexOf('=');
     QString val = s1.right(s1.count()-idx-1);
 
-    QString s="";
-    s += QString("E%1 %2 %3 %4 %5 %6\n").arg(name).arg(nod1).arg(nod2).arg(nod0).arg(nod3).arg(val);
+    QString s;
+    if (voltage) s="E";
+    else s="G";
+    s += QString("%1 %2 %3 %4 %5 %6\n").arg(name).arg(nod1).arg(nod2).arg(nod0).arg(nod3).arg(val);
     return s;
 }
