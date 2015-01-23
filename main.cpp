@@ -6,6 +6,10 @@ QString convert_rcl(QString line);
 QString convert_header(QString line);
 QString convert_diode(QString line);
 QString convert_mosfet(QString line);
+QString convert_cccs(QString line);
+QString convert_ccvs(QString line);
+QString convert_vccs(QString line);
+QString convert_vcvs(QString line);
 
 int main(int argc, char **argv)
 {
@@ -23,6 +27,10 @@ int main(int argc, char **argv)
     QRegExp ind_pattern("^[ \t]*L:[A-Za-z]+.*");
     QRegExp diode_pattern("^[ \t]*Diode:[A-Za-z]+.*");
     QRegExp mosfet_pattern("^[ \t]*MOSFET:[A-Za-z]+.*");
+    QRegExp ccvs_pattern("^[ \t]*CCVS:[A-Za-z]+.*");
+    QRegExp cccs_pattern("^[ \t]*CCCS:[A-Za-z]+.*");
+    QRegExp vcvs_pattern("^[ \t]*VCVS:[A-Za-z]+.*");
+    QRegExp vccs_pattern("^[ \t]*VCCS:[A-Za-z]+.*");
     QRegExp subckt_head_pattern("^[ \t]*\\.Def:[A-Za-z]+.*");
     QRegExp ends_pattern("^[ \t]*\\.Def:End[ \t]*$");
 
@@ -41,6 +49,8 @@ int main(int argc, char **argv)
             if (ind_pattern.exactMatch(line)) s += convert_rcl(line);
             if (diode_pattern.exactMatch(line)) s += convert_diode(line);
             if (mosfet_pattern.exactMatch(line)) s += convert_mosfet(line);
+            if (vccs_pattern.exactMatch(line)) s += convert_vccs(line);
+            if (vcvs_pattern.exactMatch(line)) s += convert_vcvs(line);
         }
         qnet_file.close();
     }
@@ -126,5 +136,55 @@ QString convert_mosfet(QString line)
     QString mod_params = par_lst.join(" ");
     mod_params.remove('\"');
     s += QString(".MODEL MMOD_%1 %2(%3) \n").arg(name).arg(Typ).arg(mod_params);
+    return s;
+}
+
+QString convert_cccs(QString line)
+{
+
+}
+
+QString convert_ccvs(QString line)
+{
+
+}
+
+QString convert_vccs(QString line)
+{
+    QStringList lst = line.split(" ",QString::SkipEmptyParts);
+    QString name = lst.takeFirst();
+    int idx = name.indexOf(':');
+    name =  name.right(name.count()-idx-1); // name
+
+    QString nod0 = lst.takeFirst();
+    QString nod1 = lst.takeFirst();
+    QString nod2 = lst.takeFirst();
+    QString nod3 = lst.takeFirst();
+    QString s1 = lst.takeFirst().remove("\"");
+    idx = s1.indexOf('=');
+    QString val = s1.right(s1.count()-idx-1);
+
+    QString s="";
+    s += QString("G%1 %2 %3 %4 %5 %6\n").arg(name).arg(nod1).arg(nod2).arg(nod0).arg(nod3).arg(val);
+    return s;
+}
+
+QString convert_vcvs(QString line)
+{
+    QStringList lst = line.split(" ",QString::SkipEmptyParts);
+    QString name = lst.takeFirst();
+    int idx = name.indexOf(':');
+    name =  name.right(name.count()-idx-1); // name
+
+    QString nod0 = lst.takeFirst();
+    QString nod1 = lst.takeFirst();
+    QString nod2 = lst.takeFirst();
+    QString nod3 = lst.takeFirst();
+    QString s1 = lst.takeFirst().remove("\"");
+    idx = s1.indexOf('=');
+    QString val = s1.right(s1.count()-idx-1);
+
+    QString s="";
+    s += QString("E%1 %2 %3 %4 %5 %6\n").arg(name).arg(nod1).arg(nod2).arg(nod0).arg(nod3).arg(val);
     return s;
 }
