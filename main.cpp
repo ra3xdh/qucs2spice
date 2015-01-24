@@ -6,6 +6,7 @@ QString convert_rcl(QString line);
 QString convert_header(QString line);
 QString convert_diode(QString line);
 QString convert_mosfet(QString line);
+QString convert_bjt(QString line);
 QString convert_cccs(QString line);
 QString convert_ccvs(QString line);
 QString convert_ccs(QString line, bool voltage);
@@ -29,6 +30,7 @@ int main(int argc, char **argv)
     QRegExp ind_pattern("^[ \t]*L:[A-Za-z]+.*");
     QRegExp diode_pattern("^[ \t]*Diode:[A-Za-z]+.*");
     QRegExp mosfet_pattern("^[ \t]*MOSFET:[A-Za-z]+.*");
+    QRegExp bjt_pattern("^[ \t]*BJT:[A-Za-z]+.*");
     QRegExp ccvs_pattern("^[ \t]*CCVS:[A-Za-z]+.*");
     QRegExp cccs_pattern("^[ \t]*CCCS:[A-Za-z]+.*");
     QRegExp vcvs_pattern("^[ \t]*VCVS:[A-Za-z]+.*");
@@ -51,9 +53,11 @@ int main(int argc, char **argv)
             if (ind_pattern.exactMatch(line)) s += convert_rcl(line);
             if (diode_pattern.exactMatch(line)) s += convert_diode(line);
             if (mosfet_pattern.exactMatch(line)) s += convert_mosfet(line);
+            if (bjt_pattern.exactMatch(line)) s += convert_bjt(line);
             if (vccs_pattern.exactMatch(line)) s += convert_vccs(line);
             if (vcvs_pattern.exactMatch(line)) s += convert_vcvs(line);
             if (cccs_pattern.exactMatch(line)) s+= convert_cccs(line);
+            if (ccvs_pattern.exactMatch(line)) s+= convert_ccvs(line);
         }
         qnet_file.close();
     }
@@ -139,6 +143,37 @@ QString convert_mosfet(QString line)
     QString mod_params = par_lst.join(" ");
     mod_params.remove('\"');
     s += QString(".MODEL MMOD_%1 %2(%3) \n").arg(name).arg(Typ).arg(mod_params);
+    return s;
+}
+
+QString convert_bjt(QString line)
+{
+    QString s="";
+    QStringList lst = line.split(" ",QString::SkipEmptyParts);
+    QString name = lst.takeFirst();
+    int idx = name.indexOf(':');
+    name =  name.right(name.count()-idx-1); // name
+    QString B = lst.takeFirst();
+    QString C = lst.takeFirst();
+    QString E = lst.takeFirst();
+    QString Sub = lst.takeFirst();
+    QString Typ = "NPN";
+    QStringList par_lst;
+    par_lst.clear();
+    for(int i=0;i<lst.count();i++) {
+        QString s1 = lst.at(i);
+        if (s1.startsWith("Type=\"npn\"")) {
+            Typ = "NPN";
+        } else if (s1.startsWith("Type=\"pnp\"")) {
+            Typ = "PNP";
+        } else {
+            par_lst.append(s1); // usual parameter
+        }
+    }
+    s += QString("Q%1 %2 %3 %4 %5 QMOD_%6 \n").arg(name).arg(C).arg(B).arg(E).arg(Sub).arg(name);
+    QString mod_params = par_lst.join(" ");
+    mod_params.remove('\"');
+    s += QString(".MODEL QMOD_%1 %2(%3) \n").arg(name).arg(Typ).arg(mod_params);
     return s;
 }
 
