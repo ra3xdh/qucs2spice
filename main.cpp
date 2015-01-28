@@ -6,6 +6,7 @@ QString convert_rcl(QString line);
 QString convert_header(QString line);
 QString convert_diode(QString line);
 QString convert_mosfet(QString line);
+QString convert_jfet(QString line);
 QString convert_bjt(QString line);
 QString convert_cccs(QString line);
 QString convert_ccvs(QString line);
@@ -30,6 +31,7 @@ int main(int argc, char **argv)
     QRegExp ind_pattern("^[ \t]*L:[A-Za-z]+.*");
     QRegExp diode_pattern("^[ \t]*Diode:[A-Za-z]+.*");
     QRegExp mosfet_pattern("^[ \t]*MOSFET:[A-Za-z]+.*");
+    QRegExp jfet_pattern("^[ \t]*JFET:[A-Za-z]+.*");
     QRegExp bjt_pattern("^[ \t]*BJT:[A-Za-z]+.*");
     QRegExp ccvs_pattern("^[ \t]*CCVS:[A-Za-z]+.*");
     QRegExp cccs_pattern("^[ \t]*CCCS:[A-Za-z]+.*");
@@ -53,6 +55,7 @@ int main(int argc, char **argv)
             if (ind_pattern.exactMatch(line)) s += convert_rcl(line);
             if (diode_pattern.exactMatch(line)) s += convert_diode(line);
             if (mosfet_pattern.exactMatch(line)) s += convert_mosfet(line);
+            if (jfet_pattern.exactMatch(line)) s += convert_jfet(line);
             if (bjt_pattern.exactMatch(line)) s += convert_bjt(line);
             if (vccs_pattern.exactMatch(line)) s += convert_vccs(line);
             if (vcvs_pattern.exactMatch(line)) s += convert_vcvs(line);
@@ -143,6 +146,36 @@ QString convert_mosfet(QString line)
     QString mod_params = par_lst.join(" ");
     mod_params.remove('\"');
     s += QString(".MODEL MMOD_%1 %2(%3) \n").arg(name).arg(Typ).arg(mod_params);
+    return s;
+}
+
+QString convert_jfet(QString line)
+{
+    QString s="";
+    QStringList lst = line.split(" ",QString::SkipEmptyParts);
+    QString name = lst.takeFirst();
+    int idx = name.indexOf(':');
+    name =  name.right(name.count()-idx-1); // name
+    QString G = lst.takeFirst();
+    QString D = lst.takeFirst();
+    QString S = lst.takeFirst();
+    QString Typ = "NJF";
+    QStringList par_lst;
+    par_lst.clear();
+    for(int i=0;i<lst.count();i++) {
+        QString s1 = lst.at(i);
+        if (s1.startsWith("Type=\"nfet\"")) {
+            Typ = "NJF";
+        } else if (s1.startsWith("Type=\"pfet\"")) {
+            Typ = "PJF";
+        } else {
+            par_lst.append(s1); // usual parameter
+        }
+    }
+    s += QString("J%1 %2 %3 %4 JMOD_%5 \n").arg(name).arg(D).arg(G).arg(S).arg(name);
+    QString mod_params = par_lst.join(" ");
+    mod_params.remove('\"');
+    s += QString(".MODEL JMOD_%1 %2(%3) \n").arg(name).arg(Typ).arg(mod_params);
     return s;
 }
 
