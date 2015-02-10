@@ -14,6 +14,7 @@ QString convert_ccs(QString line, bool voltage);
 QString convert_vccs(QString line);
 QString convert_vcvs(QString line);
 QString convert_vcs(QString line, bool voltage);
+QString convert_dc_src(QString line);
 
 int main(int argc, char **argv)
 {
@@ -37,6 +38,8 @@ int main(int argc, char **argv)
     QRegExp cccs_pattern("^[ \t]*CCCS:[A-Za-z]+.*");
     QRegExp vcvs_pattern("^[ \t]*VCVS:[A-Za-z]+.*");
     QRegExp vccs_pattern("^[ \t]*VCCS:[A-Za-z]+.*");
+    QRegExp vdc_pattern("^[ \t]*Vdc:[A-Za-z]+.*");
+    QRegExp idc_pattern("^[ \t]*Idc:[A-Za-z]+.*");
     QRegExp subckt_head_pattern("^[ \t]*\\.Def:[A-Za-z]+.*");
     QRegExp ends_pattern("^[ \t]*\\.Def:End[ \t]*$");
 
@@ -61,6 +64,8 @@ int main(int argc, char **argv)
             if (vcvs_pattern.exactMatch(line)) s += convert_vcvs(line);
             if (cccs_pattern.exactMatch(line)) s+= convert_cccs(line);
             if (ccvs_pattern.exactMatch(line)) s+= convert_ccvs(line);
+            if (idc_pattern.exactMatch(line)||
+                vdc_pattern.exactMatch(line)) s+= convert_dc_src(line);
         }
         qnet_file.close();
     }
@@ -273,3 +278,20 @@ QString convert_vcs(QString line,bool voltage)
     s += QString("%1 %2 %3 %4 %5 %6\n").arg(name).arg(nod1).arg(nod2).arg(nod0).arg(nod3).arg(val);
     return s;
 }
+
+QString convert_dc_src(QString line)
+{
+    QString s="";
+    QStringList lst = line.split(" ",QString::SkipEmptyParts);
+    QString s1 = lst.takeFirst();
+    s += s1.remove(':');
+    s += " " + lst.takeFirst();
+    s += " " + lst.takeFirst() + " ";
+    s1 = lst.takeFirst().remove("\"");
+    int idx = s1.indexOf('=');
+    QString val = s1.right(s1.count()-idx-1);
+    s += "DC " + val + "\n";
+    return s;
+}
+
+
