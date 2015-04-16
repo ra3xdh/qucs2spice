@@ -16,6 +16,8 @@ QString convert_vcs(QString line, bool voltage);
 QString convert_dc_src(QString line);
 QString convert_edd(QString line);
 
+QStringList EqnsAndVars;
+
 int main(int argc, char **argv)
 {
     if (argc!=3) {
@@ -50,7 +52,7 @@ int main(int argc, char **argv)
     if (qnet_file.open(QIODevice::ReadOnly)) {
 
         QTextStream qucs_netlist(&qnet_file);
-        QStringList EqnsAndVars;
+        EqnsAndVars.clear();
 
         while (!qucs_netlist.atEnd()) { // Find equations
             QString line = qucs_netlist.readLine();
@@ -335,6 +337,25 @@ QString convert_dc_src(QString line)
 QString convert_edd(QString line)
 {
     QString s="";
+    QStringList lst = line.split(" ");
+    QStringList nods;
+    QString nam = lst.takeFirst().remove(':');
+
+    foreach (QString str,lst) {
+        if (!str.contains('=')) {
+            str.replace("gnd","0");
+            nods.append(str);
+        } else break;
+    }
+
+    int Branch = nods.count()/2;
+
+    for (int i=0;i<Branch;i++) {
+        QString Ivar = line.section('"',2*i+1,2*i+1,QString::SectionSkipEmpty);
+        QString Ieqn = EqnsAndVars.at(EqnsAndVars.indexOf(Ivar)+1);
+        s += QString("BI%1 %2 %3 I=%4\n").arg(nam).arg(nods.at(2*i)).arg(nods.at(2*i+1)).arg(Ieqn);
+    }
+
     return s;
 }
 
