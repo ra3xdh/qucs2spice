@@ -1,7 +1,6 @@
 #include <iostream>
 #include <QtCore>
 
-
 QString convert_rcl(QString line);
 QString convert_header(QString line);
 QString convert_diode(QString line);
@@ -15,6 +14,7 @@ QString convert_vccs(QString line);
 QString convert_vcvs(QString line);
 QString convert_vcs(QString line, bool voltage);
 QString convert_dc_src(QString line);
+QString convert_edd(QString line);
 
 int main(int argc, char **argv)
 {
@@ -42,11 +42,48 @@ int main(int argc, char **argv)
     QRegExp idc_pattern("^[ \t]*Idc:[A-Za-z]+.*");
     QRegExp subckt_head_pattern("^[ \t]*\\.Def:[A-Za-z]+.*");
     QRegExp ends_pattern("^[ \t]*\\.Def:End[ \t]*$");
+    QRegExp edd_pattern("^[ \t]*EDD:[A-Za-z]+.*");
+    QRegExp eqn_pattern("^[ \t]*Eqn:[A-Za-z]+.*");
 
     QString s="";
 
     if (qnet_file.open(QIODevice::ReadOnly)) {
+
         QTextStream qucs_netlist(&qnet_file);
+        QStringList EqnsAndVars;
+
+        while (!qucs_netlist.atEnd()) { // Find equations
+            QString line = qucs_netlist.readLine();
+            if (eqn_pattern.exactMatch(line)) {
+                line.remove(QRegExp("^[ \t]*Eqn:[A-Za-z]+\\w+\\s+"));
+                QString var;
+                for(QString::iterator it = line.begin();it != line.end(); it++) {
+                    if ((*it).isLetterOrNumber()) {
+                        while ((*it)!='=') {
+                            var.append(*it);
+                            it++;
+                        }
+                        EqnsAndVars.append(var);
+                        var.clear();
+                    } else if ((*it)=='"') {
+                        it++;
+                        do {
+                            var.append(*it);
+                            it++;
+                        } while ((*it)!='"');
+                        EqnsAndVars.append(var);
+                        var.clear();
+                    }
+                }
+            }
+        }
+        EqnsAndVars.removeAll("Export");
+        EqnsAndVars.removeAll("no");
+        EqnsAndVars.removeAll("yes");
+        qDebug()<<EqnsAndVars;
+
+
+        qucs_netlist.seek(0); // To begin
         while (!qucs_netlist.atEnd()) {
             QString line = qucs_netlist.readLine();
             if (subckt_head_pattern.exactMatch(line)) {
@@ -62,10 +99,11 @@ int main(int argc, char **argv)
             if (bjt_pattern.exactMatch(line)) s += convert_bjt(line);
             if (vccs_pattern.exactMatch(line)) s += convert_vccs(line);
             if (vcvs_pattern.exactMatch(line)) s += convert_vcvs(line);
-            if (cccs_pattern.exactMatch(line)) s+= convert_cccs(line);
-            if (ccvs_pattern.exactMatch(line)) s+= convert_ccvs(line);
+            if (cccs_pattern.exactMatch(line)) s += convert_cccs(line);
+            if (ccvs_pattern.exactMatch(line)) s += convert_ccvs(line);
             if (idc_pattern.exactMatch(line)||
-                vdc_pattern.exactMatch(line)) s+= convert_dc_src(line);
+                vdc_pattern.exactMatch(line)) s += convert_dc_src(line);
+            if (edd_pattern.exactMatch(line)) s += convert_edd(line);
         }
         qnet_file.close();
     }
@@ -291,6 +329,12 @@ QString convert_dc_src(QString line)
     int idx = s1.indexOf('=');
     QString val = s1.right(s1.count()-idx-1);
     s += "DC " + val + "\n";
+    return s;
+}
+
+QString convert_edd(QString line)
+{
+    QString s="";
     return s;
 }
 
