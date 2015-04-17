@@ -2,3 +2,14 @@ qucs2spice
 
 Limited Qucs-netlist to Spice-netlist converter 
 for Qucs library components.
+
+Build instructions:
+
+cmake
+make .
+
+Usage:
+
+Qucs2spice converts Qucs netlist input.net to Spice netlist output.cir as following:
+
+qucs2spice input.net output.cir

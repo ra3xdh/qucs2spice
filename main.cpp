@@ -351,9 +351,22 @@ QString convert_edd(QString line)
     int Branch = nods.count()/2;
 
     for (int i=0;i<Branch;i++) {
+        // current part
         QString Ivar = line.section('"',2*i+1,2*i+1,QString::SectionSkipEmpty);
         QString Ieqn = EqnsAndVars.at(EqnsAndVars.indexOf(Ivar)+1);
-        s += QString("BI%1 %2 %3 I=%4\n").arg(nam).arg(nods.at(2*i)).arg(nods.at(2*i+1)).arg(Ieqn);
+        QString plus = nods.at(2*i+1);
+        QString minus = nods.at(2*i);
+        s += QString("BI%1 %2 %3 I=%4\n").arg(nam).arg(minus).arg(plus).arg(Ieqn);
+        // charge part
+        QString Qvar = line.section('"',2*i+3,2*i+3,QString::SectionSkipEmpty);
+        QString Qeqn = EqnsAndVars.at(EqnsAndVars.indexOf(Qvar)+1);
+        Qeqn.remove(' ');
+        QRegExp zero_pattern("0+(\\.*0+|)");
+        if (!zero_pattern.exactMatch(Qeqn)) {
+            s += QString("G%1Q%2 %3 %4 n%1Q%2 %4 1.0\n").arg(nam).arg(i).arg(plus).arg(minus);
+            s += QString("L%1Q%2 n%1Q%2 %3 1.0\n").arg(nam).arg(i).arg(minus);
+            s += QString("B%1Q%2 n%1Q%2 %3 I=-(%4)\n").arg(nam).arg(i).arg(minus).arg(Qeqn);
+        }
     }
 
     return s;
